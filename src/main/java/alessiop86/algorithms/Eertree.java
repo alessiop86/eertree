@@ -1,106 +1,73 @@
 package alessiop86.algorithms;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Eertree {
 
-    private static final int MAXN = 105000;
-
-    int stringLength;
-    char[] s = new char[MAXN]; //why MAXN?
-    Node[] tree = new Node[MAXN]; //why MAXN?
-    int biggerIndexOfPalindromeThatIsMaxSuffixPalindrome;            // max suffix palindrome
-    //long ans;
+    private final char[] string;
+    private List<PalindromeNode> tree = new ArrayList<>();
+    private int longestPalindromeSuffixNodeIndex;
 
     public Eertree(String str) {
-        s = str.toCharArray();
-        stringLength = str.length();
-    }
-
-    class Node {
-        //int next[] = new int[26]; //strictly following the paper I should have used a balanced BST here
-        int outgoingNodesIndexes[] = new int[26]; //strictly following the paper I should have used a balanced BST here.
-        // Each PalindromeNode can have at most 1 outgoing node for every symbol of the alphabet in my case
-        int lengthOfThePalindromeRepresentedByThisNode;
-        int largestProperSuffixPalindromeNodeIndex;
+        string = str.toCharArray();
     }
 
     void initTree() {
-        //2 suffixes palindromes until now (number of nodes??? check)
-        biggerIndexOfPalindromeThatIsMaxSuffixPalindrome = 2;
+        PalindromeNode imaginaryString = PalindromeNode.imaginaryString();
+        tree.add(imaginaryString.index, imaginaryString);
 
-        //imaginary string
-        tree[1] = new Node();
-        tree[1].lengthOfThePalindromeRepresentedByThisNode = -1;
-        tree[1].largestProperSuffixPalindromeNodeIndex = 1;
+        PalindromeNode emptyString = PalindromeNode.emptyString(imaginaryString);
+        tree.add(emptyString.index, emptyString);
 
-        //empty string
-        tree[2] = new Node();
-        tree[2].lengthOfThePalindromeRepresentedByThisNode = 0;
-        tree[2].largestProperSuffixPalindromeNodeIndex = 1;
+        longestPalindromeSuffixNodeIndex = emptyString.index;
     }
-
-
-    public boolean addLetter(int pos) {
-        int cur = biggerIndexOfPalindromeThatIsMaxSuffixPalindrome;
-        int curlen = 0;
-        int let = s[pos] - 'a'; //to transform in char
-        //char letter = s[pos];
-
-
-        while (true) {
-            curlen = tree[cur].lengthOfThePalindromeRepresentedByThisNode;
-            boolean longEnoughToBeAProperSuffixPalindrome = pos - 1 - curlen >= 0;
-            boolean currentLetterEqualsToLetterBeforeTheLastSuffixPalindrome = longEnoughToBeAProperSuffixPalindrome && s[pos - 1 - curlen] == s[pos];
-            if (longEnoughToBeAProperSuffixPalindrome && currentLetterEqualsToLetterBeforeTheLastSuffixPalindrome)
-                break;
-            //I go back until I find an appropriate node to which add the letter, ultimately ending up with the main node
-            cur = tree[cur].largestProperSuffixPalindromeNodeIndex;
-        }
-        if (tree[cur].outgoingNodesIndexes[let] != 0) {//if (tree[cur].next[let] != 0) {
-            biggerIndexOfPalindromeThatIsMaxSuffixPalindrome = tree[cur].outgoingNodesIndexes[let];//  biggerIndexOfPalindromeThatIsMaxSuffixPalindrome = tree[cur].next[let];
-            return false;
-        }
-
-//        num++;
-//        biggerIndexOfPalindromeThatIsMaxSuffixPalindrome = num;
-//        tree[num].palindromeLength = tree[cur].palindromeLength + 2;
-//        tree[cur].next[let] = num;
-//
-//        if (tree[num].palindromeLength == 1) {
-//            tree[num].largestProperSuffixPalindromeNodeIndex = 2;
-//            tree[num].num = 1;
-//            return true;
-//        }
-
-//        while (true) {
-//            cur = tree[cur].largestProperSuffixPalindromeNodeIndex;
-//            curlen = tree[cur].palindromeLength;
-//            if (pos - 1 - curlen >= 0 && s[pos - 1 - curlen] == s[pos]) {
-//                tree[num].largestProperSuffixPalindromeNodeIndex = tree[cur].next[let];
-//                break;
-//            }
-//        }
-
-        //tree[num].num = 1 + tree[tree[num].largestProperSuffixPalindromeNodeIndex].num;
-    System.out.println("I need to add cur" + cur);
-        return true;
-    }
-
-
-    public static void main(String[] args) {
-
-        String str = "eertree";
-        Eertree eertree = new Eertree(str);
-
-        eertree.build();
-
-        //System.out.println(eertree.ans);
-    }
-
 
     private void build() {
         initTree();
-        for (int i = 0; i < stringLength; i++) {
+        for (int i = 0; i < string.length ; i++) {
             addLetter(i);
         }
+        System.out.println(tree);
     }
+
+    /**
+     * Returning true or false if a new palindrome has been added to the eertree. It is not really used in this example
+     */
+    public boolean addLetter(int letterIndex) {
+        int cursorLargestSuffixPalindrome = longestPalindromeSuffixNodeIndex;
+        char letter = string[letterIndex];
+
+        while (necessaryToMoveTheCursorToAShorterPalindromeSuffix(letterIndex, cursorLargestSuffixPalindrome, letter)) {
+            cursorLargestSuffixPalindrome = tree.get(cursorLargestSuffixPalindrome).longestProperSuffixPalindrome.index;
+            //I go back until I find an appropriate node to which add the letter, ultimately ending up with the main node
+            //cursorLargestSuffixPalindrome = tree[cursorLargestSuffixPalindrome].largestProperSuffixPalindromeNodeIndex;
+        }
+
+        if (tree.get(cursorLargestSuffixPalindrome).outgoingNodes.containsKey(letter)) {//if (tree[cursorLargestSuffixPalindrome].next[let] != 0) {
+            longestPalindromeSuffixNodeIndex = tree.get(cursorLargestSuffixPalindrome).outgoingNodes.get(letter).index;//  longestPalindromeSuffixNodeIndex = tree[cursorLargestSuffixPalindrome].next[let];
+            return false; //no need to add already there
+        }
+
+        int nextNodeIndex = tree.size();
+        PalindromeNode newNode = new PalindromeNode(nextNodeIndex, tree.get(cursorLargestSuffixPalindrome), letter);
+
+        tree.add(newNode);
+        tree.get(cursorLargestSuffixPalindrome).outgoingNodes.put(letter,newNode);
+
+        longestPalindromeSuffixNodeIndex = newNode.index;
+        return true;
+    }
+
+    private boolean necessaryToMoveTheCursorToAShorterPalindromeSuffix(int pos, int cursorLargestSuffixPalindrome, char letter) {
+        int index = pos - tree.get(cursorLargestSuffixPalindrome).getPalindromeLength() - 1;
+        return index < 0 || letter != string[index];
+    }
+
+    public static void main(String[] args) {
+        String str = "eertree";
+        Eertree eertree = new Eertree(str);
+        eertree.build();
+    }
+
 }
