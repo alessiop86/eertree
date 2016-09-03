@@ -1,5 +1,8 @@
 package alessiop86.algorithms.eertree;
 
+/**
+ * Empty String is a special node whose suffix is always the imaginary string, and whose index fixed
+ */
 public class EmptyStringPalindromeNode extends PalindromeNode {
 
     private static final int INDEX_EMPTY_STRING = 1;

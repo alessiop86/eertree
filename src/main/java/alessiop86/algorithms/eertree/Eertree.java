@@ -6,8 +6,9 @@ import java.util.List;
 public class Eertree {
 
     private final char[] string;
+    //backing data structure for eertree nodes, an ArrayList for convenience, but it could also have been an array or an HashMap
     private List<PalindromeNode> tree = new ArrayList<>();
-    private int longestPalindromeSuffixNodeIndex;
+    private int currentLongestPalindromeSuffixNodeIndex;
 
     public Eertree(String str) {
         string = str.toCharArray();
@@ -20,7 +21,7 @@ public class Eertree {
         PalindromeNode emptyString = new EmptyStringPalindromeNode(imaginaryString);
         tree.add(emptyString.getIndex(), emptyString);
 
-        longestPalindromeSuffixNodeIndex = emptyString.getIndex();
+        currentLongestPalindromeSuffixNodeIndex = emptyString.getIndex();
     }
 
     private void build() {
@@ -32,35 +33,58 @@ public class Eertree {
     }
 
     /**
-     * Returning true or false if a new palindrome has been added to the eertree. It is not really used in this example
+     * Returning true or false if a new palindrome has been added to the eertree.
+     * This returned boolean is not used in this example but it could be useful depending on the problem to which
+     * the eertree is applied
      */
     public boolean addLetter(int letterIndex) {
-        int cursorLargestSuffixPalindrome = longestPalindromeSuffixNodeIndex;
         char letter = string[letterIndex];
+        PalindromeNode longestPalindromeSuffixForNextPalindrome = getLongestPalindromeSuffixForNextPalindromeNode(letterIndex, letter);
 
-        while (necessaryToMoveTheCursorToAShorterPalindromeSuffix(letterIndex, cursorLargestSuffixPalindrome, letter)) {
-            cursorLargestSuffixPalindrome = tree.get(cursorLargestSuffixPalindrome).getLongestPalindromeSuffix().getIndex();
-            //I go back until I find an appropriate node to which add the letter, ultimately ending up with the main node
-            //cursorLargestSuffixPalindrome = tree[cursorLargestSuffixPalindrome].largestProperSuffixPalindromeNodeIndex;
+
+        if (isDuplicatePalindrome(letter, longestPalindromeSuffixForNextPalindrome)) {
+            //in this version of the algorithm (from the official paper) we do not keep track of duplicate palindromes.
+            //If the problem where the Eertree requires it (e.g. to find out the total number of palindromes including duplicates),
+            //you could need to keep track of the duplicate palindromes with a counter inside the PalindromeNode class
+            currentLongestPalindromeSuffixNodeIndex = longestPalindromeSuffixForNextPalindrome.getOutgoingNodes().get(letter).getIndex();
+            return false;
         }
 
-        if (tree.get(cursorLargestSuffixPalindrome).outgoingNodes.containsKey(letter)) {//if (tree[cursorLargestSuffixPalindrome].next[let] != 0) {
-            longestPalindromeSuffixNodeIndex = tree.get(cursorLargestSuffixPalindrome).outgoingNodes.get(letter).getIndex();//  longestPalindromeSuffixNodeIndex = tree[cursorLargestSuffixPalindrome].next[let];
-            return false; //no need to add already there
-        }
-
-        int nextNodeIndex = tree.size();
-        PalindromeNode newNode = new PalindromeNode(nextNodeIndex, tree.get(cursorLargestSuffixPalindrome), letter);
-
-        tree.add(newNode);
-        tree.get(cursorLargestSuffixPalindrome).outgoingNodes.put(letter,newNode);
-
-        longestPalindromeSuffixNodeIndex = newNode.getIndex();
+        int nextNodeIndex = tree.size(); //current max node index is tree.size() - 1
+        PalindromeNode newNode = new PalindromeNode(nextNodeIndex, longestPalindromeSuffixForNextPalindrome, letter);
+        addPalindromeNode(newNode, letter);
         return true;
     }
 
-    private boolean necessaryToMoveTheCursorToAShorterPalindromeSuffix(int pos, int cursorLargestSuffixPalindrome, char letter) {
-        int index = pos - tree.get(cursorLargestSuffixPalindrome).getPalindromeLength() - 1;
+
+    private void addPalindromeNode(PalindromeNode newNode, char addedLetter) {
+        tree.add(newNode);
+
+        //adding the edge connecting the longestPalindromeSuffix to the new PalindromeNode
+        newNode.getLongestPalindromeSuffix().getOutgoingNodes().put(addedLetter, newNode);
+
+        currentLongestPalindromeSuffixNodeIndex = newNode.getIndex();
+    }
+
+    //if there is already an outgoing node from the longestPalindromeSuffix with the same letter, it means
+    //there is already a duplicate of the palindrome we have just found.
+    private boolean isDuplicatePalindrome(char letter, PalindromeNode longestPalindromeSuffixForNextPalindrome) {
+        return longestPalindromeSuffixForNextPalindrome.getOutgoingNodes().containsKey(letter);
+    }
+
+    //I start with the longest palindrome suffix added to the eertree, then I go back traversing the eertree using
+    //the PalindromeNode.getLongestPalindromeSuffix() references, until I find an appropriate node to which add the letter
+    //or until i hit the imaginary string.
+    private PalindromeNode getLongestPalindromeSuffixForNextPalindromeNode(int letterIndex, char letter) {
+        PalindromeNode longestPalindromeSuffixForNextPalindrome = tree.get(currentLongestPalindromeSuffixNodeIndex);
+        while (isNecessaryToMoveTheCursorToAShorterPalindromeSuffix(letterIndex, letter, longestPalindromeSuffixForNextPalindrome)) {
+            longestPalindromeSuffixForNextPalindrome = tree.get(longestPalindromeSuffixForNextPalindrome.getLongestPalindromeSuffix().getIndex());
+        }
+        return longestPalindromeSuffixForNextPalindrome;
+    }
+
+    private boolean isNecessaryToMoveTheCursorToAShorterPalindromeSuffix(int letterIndex, char letter, PalindromeNode longestSuffixPalindrome) {
+        int index = letterIndex - longestSuffixPalindrome.getPalindromeLength() - 1;
         return index < 0 || letter != string[index];
     }
 
