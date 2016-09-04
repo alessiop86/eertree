@@ -11,7 +11,7 @@ public class ImaginaryStringPalindromeNode extends PalindromeNode {
     private static final int INDEX_IMAGINARY_STRING = 0;
 
     public ImaginaryStringPalindromeNode() {
-        super(INDEX_IMAGINARY_STRING, null);
+        super(INDEX_IMAGINARY_STRING);
     }
 
     @Override

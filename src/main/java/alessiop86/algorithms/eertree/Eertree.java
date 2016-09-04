@@ -1,9 +1,9 @@
 package alessiop86.algorithms.eertree;
 
-import static alessiop86.algorithms.eertree.EmptyStringPalindromeNode.INDEX_EMPTY_STRING;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import static alessiop86.algorithms.eertree.EmptyStringPalindromeNode.INDEX_EMPTY_STRING;
 
 public class Eertree {
 
@@ -16,7 +16,7 @@ public class Eertree {
         string = str.toCharArray();
     }
 
-    void initTree() {
+    private void initTree() {
         ImaginaryStringPalindromeNode imaginaryString = new ImaginaryStringPalindromeNode();
         tree.add(imaginaryString.getIndex(), imaginaryString);
 
@@ -40,34 +40,45 @@ public class Eertree {
      * the eertree is applied
      */
     public boolean addLetter(int letterIndex) {
-        char letter = string[letterIndex];
-        PalindromeNode longestPalindromeSuffixForNextPalindrome = getLongestPalindromeSuffixForNextPalindromeNode(letterIndex, letter);
+        Insertion insertion = new Insertion(letterIndex);
+        PalindromeNode longestPalindromePrefix = getLongestPalindromePrefixForNextPalindromeNode(insertion);
 
-
-        if (isDuplicatePalindrome(letter, longestPalindromeSuffixForNextPalindrome)) {
+        if (isDuplicatePalindrome(insertion.letter, longestPalindromePrefix)) {
             //in this version of the algorithm (from the official paper) we do not keep track of duplicate palindromes.
-            //If the problem where the Eertree requires it (e.g. to find out the total number of palindromes including duplicates),
+            //If the problem requires it (e.g. to find out the total number of palindromes including duplicates),
             //you could need to keep track of the duplicate palindromes with a counter inside the PalindromeNode class
-            currentLongestPalindromeSuffixNodeIndex = longestPalindromeSuffixForNextPalindrome.getOutgoingNodes().get(letter).getIndex();
+            currentLongestPalindromeSuffixNodeIndex = longestPalindromePrefix.getOutgoingNodes().get(insertion.letter).getIndex();
             return false;
         }
 
-        int nextNodeIndex = tree.size(); //current max node index is tree.size() - 1
-        PalindromeNode newNode = new PalindromeNode(nextNodeIndex, longestPalindromeSuffixForNextPalindrome, letter);
-        addPalindromeNode(newNode, letter);
+        addNewPalindromeNode(longestPalindromePrefix, insertion);
         return true;
     }
 
 
-    private void addPalindromeNode(PalindromeNode newNode, char addedLetter) {
+    private void addNewPalindromeNode(PalindromeNode longestPalindromePrefix, Insertion insertion) {
+        int nextNodeIndex = tree.size(); //current max node index is tree.size() - 1
+        //I create a PalindromeNode with a null suffix, I'll update that later
+        PalindromeNode newNode = new PalindromeNode(nextNodeIndex);
+        if (longestPalindromePrefix.isImaginaryStringPalindromeNode()) {
+            //we are ignoring the imaginary prefix (centered at the position -1 of the string) and what comes before
+            // the suffix (i.e. an occurrence of addedLetter at the left of the imaginary string,
+            // and we just add a new palindrome of length 1 and content 'addedLetter'
+            newNode.setLabel("" + insertion.letter);
+        } else {
+            newNode.setLabel(insertion.letter + longestPalindromePrefix.getLabel() + insertion.letter);
+        }
         tree.add(newNode);
 
-        //adding the edge connecting the longestPalindromeSuffix to the new PalindromeNode
-        newNode.getLongestPalindromeSuffix().getOutgoingNodes().put(addedLetter, newNode);
+        //adding the edge connecting the palindrome prefix to the new PalindromeNode
+        longestPalindromePrefix.getOutgoingNodes().put(insertion.letter, newNode);
 
         //suffix reference to imaginary string is not allowed, change it to the empty string
-        if (newNode.getLongestPalindromeSuffix().isImaginaryStringPalindromeNode()) {
+        if (longestPalindromePrefix.isImaginaryStringPalindromeNode()) {
             newNode.setLongestPalindromeSuffix(tree.get(INDEX_EMPTY_STRING));
+        } else {
+            PalindromeNode suffixForNewNode = getLongestPalindromeSuffixForNewNode(insertion, longestPalindromePrefix);
+            newNode.setLongestPalindromeSuffix(suffixForNewNode);
         }
 
         currentLongestPalindromeSuffixNodeIndex = newNode.getIndex();
@@ -79,20 +90,38 @@ public class Eertree {
         return longestPalindromeSuffixForNextPalindrome.getOutgoingNodes().containsKey(letter);
     }
 
-    //I start with the longest palindrome suffix added to the eertree, then I go back traversing the eertree using
-    //the PalindromeNode.getLongestPalindromeSuffix() references, until I find an appropriate node to which add the letter
-    //or until i hit the imaginary string.
-    private PalindromeNode getLongestPalindromeSuffixForNextPalindromeNode(int letterIndex, char letter) {
-        PalindromeNode longestPalindromeSuffixForNextPalindrome = tree.get(currentLongestPalindromeSuffixNodeIndex);
-        while (isNecessaryToMoveTheCursorToAShorterPalindromeSuffix(letterIndex, letter, longestPalindromeSuffixForNextPalindrome)) {
-            longestPalindromeSuffixForNextPalindrome = tree.get(longestPalindromeSuffixForNextPalindrome.getLongestPalindromeSuffix().getIndex());
+    //I start with the longest palindrome suffix of the previous PalindromeNode added to the eertree, then I go back
+    // traversing the eertree using the PalindromeNode.getLongestPalindromeSuffix() references, until I find an appropriate node to use as a prefix
+    // for my next PalindromeNode (in worst case I end up hitting the imaginary string)
+    private PalindromeNode getLongestPalindromePrefixForNextPalindromeNode(Insertion insertion) {
+        PalindromeNode longestPalindromePrefix = tree.get(currentLongestPalindromeSuffixNodeIndex);
+        while (isNecessaryToKeepTraversingTheSuffixChain(insertion, longestPalindromePrefix)) {
+            longestPalindromePrefix = longestPalindromePrefix.getLongestPalindromeSuffix();
         }
-        return longestPalindromeSuffixForNextPalindrome;
+        return longestPalindromePrefix;
     }
 
-    private boolean isNecessaryToMoveTheCursorToAShorterPalindromeSuffix(int letterIndex, char letter, PalindromeNode longestSuffixPalindrome) {
-        int index = letterIndex - longestSuffixPalindrome.getPalindromeLength() - 1;
-        return index < 0 || letter != string[index];
+//    private boolean isNecessaryToMoveTheCursorToAShorterPalindromeNode(Insertion insertion, PalindromeNode palindromeNode) {
+//        int index = insertion.letterIndex - palindromeNode.getPalindromeLength() - 1;
+//        return index < 0 || insertion.letter != string[index];
+//    }
+
+    private PalindromeNode getLongestPalindromeSuffixForNewNode(Insertion insertion, PalindromeNode longestPalindromePrefix) {
+        PalindromeNode suffixForNewNode = longestPalindromePrefix.getLongestPalindromeSuffix();
+        while(isNecessaryToKeepTraversingTheSuffixChain(insertion, suffixForNewNode)) {
+            suffixForNewNode = suffixForNewNode.getLongestPalindromeSuffix();
+        }
+        suffixForNewNode = suffixForNewNode.getOutgoingNodes().get(insertion.letter);
+        return suffixForNewNode;
+    }
+
+    private boolean isNecessaryToKeepTraversingTheSuffixChain(Insertion insertion, PalindromeNode suffixForNewNode) {
+         if (suffixForNewNode.isImaginaryStringPalindromeNode()) {
+             return false;
+         }
+        //if B=suffixForNewNode is not imaginary, we need to check that inside the original string xBx is a palindrome
+        int indexOfLetterPrecedingTheSuffixForTheNewNode = insertion.letterIndex - suffixForNewNode.getPalindromeLength() - 1;
+        return (indexOfLetterPrecedingTheSuffixForTheNewNode < 0 || insertion.letter != string[indexOfLetterPrecedingTheSuffixForTheNewNode]);
     }
 
     public static void main(String[] args) {
@@ -101,4 +130,13 @@ public class Eertree {
         eertree.build();
     }
 
+    class Insertion {
+        final char letter;
+        final int letterIndex;
+
+        public Insertion(int letterIndex) {
+            this.letterIndex = letterIndex;
+            this.letter = string[letterIndex];
+        }
+    }
 }
