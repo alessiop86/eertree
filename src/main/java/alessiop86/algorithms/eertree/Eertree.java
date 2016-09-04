@@ -1,5 +1,7 @@
 package alessiop86.algorithms.eertree;
 
+import static alessiop86.algorithms.eertree.EmptyStringPalindromeNode.INDEX_EMPTY_STRING;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,6 +64,11 @@ public class Eertree {
 
         //adding the edge connecting the longestPalindromeSuffix to the new PalindromeNode
         newNode.getLongestPalindromeSuffix().getOutgoingNodes().put(addedLetter, newNode);
+
+        //suffix reference to imaginary string is not allowed, change it to the empty string
+        if (newNode.getLongestPalindromeSuffix().isImaginaryStringPalindromeNode()) {
+            newNode.setLongestPalindromeSuffix(tree.get(INDEX_EMPTY_STRING));
+        }
 
         currentLongestPalindromeSuffixNodeIndex = newNode.getIndex();
     }
