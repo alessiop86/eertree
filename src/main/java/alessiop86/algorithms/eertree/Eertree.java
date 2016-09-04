@@ -101,11 +101,9 @@ public class Eertree {
         return longestPalindromePrefix;
     }
 
-//    private boolean isNecessaryToMoveTheCursorToAShorterPalindromeNode(Insertion insertion, PalindromeNode palindromeNode) {
-//        int index = insertion.letterIndex - palindromeNode.getPalindromeLength() - 1;
-//        return index < 0 || insertion.letter != string[index];
-//    }
-
+    //I start with the longest palindrome suffix of the palindrome prefix I have just used to compute the new PalindromeNode, then I
+    //go back traversing the eertree using the PalindromeNode.getLongestPalindromeSuffix() references until I find an
+    //appropriate palindrome suitable as a suffix for the new PalindromeNode
     private PalindromeNode getLongestPalindromeSuffixForNewNode(Insertion insertion, PalindromeNode longestPalindromePrefix) {
         PalindromeNode suffixForNewNode = longestPalindromePrefix.getLongestPalindromeSuffix();
         while(isNecessaryToKeepTraversingTheSuffixChain(insertion, suffixForNewNode)) {
@@ -115,13 +113,13 @@ public class Eertree {
         return suffixForNewNode;
     }
 
-    private boolean isNecessaryToKeepTraversingTheSuffixChain(Insertion insertion, PalindromeNode suffixForNewNode) {
-         if (suffixForNewNode.isImaginaryStringPalindromeNode()) {
+    private boolean isNecessaryToKeepTraversingTheSuffixChain(Insertion insertion, PalindromeNode currentSuffix) {
+         if (currentSuffix.isImaginaryStringPalindromeNode()) {
              return false;
          }
         //if B=suffixForNewNode is not imaginary, we need to check that inside the original string xBx is a palindrome
-        int indexOfLetterPrecedingTheSuffixForTheNewNode = insertion.letterIndex - suffixForNewNode.getPalindromeLength() - 1;
-        return (indexOfLetterPrecedingTheSuffixForTheNewNode < 0 || insertion.letter != string[indexOfLetterPrecedingTheSuffixForTheNewNode]);
+        int indexOfLetterPrecedingTheCurrentSuffix = insertion.letterIndex - currentSuffix.getPalindromeLength() - 1;
+        return (indexOfLetterPrecedingTheCurrentSuffix < 0 || insertion.letter != string[indexOfLetterPrecedingTheCurrentSuffix]);
     }
 
     public static void main(String[] args) {
